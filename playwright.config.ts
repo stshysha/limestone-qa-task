@@ -18,6 +18,9 @@ export default defineConfig({
     {
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
+      use: {
+        baseURL: 'https://www.saucedemo.com',
+      },
     },
     // UI tests depend on setup
     {
