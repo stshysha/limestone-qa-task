@@ -1,0 +1,189 @@
+{
+  "info": {
+    "name": "JSONPlaceholder – Limestone Digital Task",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://jsonplaceholder.typicode.com" }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level helper: validates a single object against a JSON schema.",
+          "// Individual requests call pm.collectionVariables.get('validateObject') is not",
+          "// directly possible, so we attach the validator to pm.globals for sharing.",
+          "",
+          "function validateObject(obj, schema, path) {",
+          "    path = path || 'root';",
+          "    var errors = [];",
+          "    if (schema.required) {",
+          "        schema.required.forEach(function(key) {",
+          "            if (obj[key] === undefined || obj[key] === null || obj[key] === '') {",
+          "                errors.push(path + '.' + key + ': required and must not be empty');",
+          "            }",
+          "        });",
+          "    }",
+          "    if (schema.properties) {",
+          "        Object.keys(schema.properties).forEach(function(key) {",
+          "            if (obj[key] !== undefined) {",
+          "                var subSchema = schema.properties[key];",
+          "                if (subSchema.type && typeof obj[key] !== subSchema.type) {",
+          "                    errors.push(path + '.' + key + ': expected ' + subSchema.type + ', got ' + typeof obj[key]);",
+          "                }",
+          "            }",
+          "        });",
+          "    }",
+          "    return errors;",
+          "}",
+          "",
+          "pm.globals.set('validateObject', validateObject.toString());"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. GET /users – pick first user",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const userSchema = {",
+              "    required: ['id', 'name', 'username', 'email'],",
+              "    properties: {",
+              "        id:       { type: 'number' },",
+              "        name:     { type: 'string' },",
+              "        username: { type: 'string' },",
+              "        email:    { type: 'string' }",
+              "    }",
+              "};",
+              "",
+              "pm.test('Status is 200', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response is an array', function() {",
+              "    pm.expect(pm.response.json()).to.be.an('array').with.lengthOf.above(0);",
+              "});",
+              "",
+              "pm.test('Every user object matches the schema', function() {",
+              "    const users = pm.response.json();",
+              "    users.forEach(function(user, i) {",
+              "        const errors = [];",
+              "        userSchema.required.forEach(function(key) {",
+              "            if (!user[key] && user[key] !== 0) {",
+              "                errors.push('user[' + i + '].' + key + ': required and not empty');",
+              "            }",
+              "        });",
+              "        Object.keys(userSchema.properties).forEach(function(key) {",
+              "            if (user[key] !== undefined) {",
+              "                const expectedType = userSchema.properties[key].type;",
+              "                pm.expect(typeof user[key], 'user[' + i + '].' + key + ' type').to.equal(expectedType);",
+              "            }",
+              "        });",
+              "        pm.expect(errors, errors.join(', ')).to.have.lengthOf(0);",
+              "    });",
+              "});",
+              "",
+              "// Store the first user's id for downstream requests",
+              "const firstUserId = pm.response.json()[0].id;",
+              "pm.environment.set('userId', firstUserId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/users"
+      }
+    },
+    {
+      "name": "2. GET /posts?userId={{userId}} – posts of selected user",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const postSchema = {",
+              "    required: ['userId', 'id', 'title', 'body'],",
+              "    properties: {",
+              "        userId: { type: 'number' },",
+              "        id:     { type: 'number' },",
+              "        title:  { type: 'string' },",
+              "        body:   { type: 'string' }",
+              "    }",
+              "};",
+              "",
+              "pm.test('Status is 200', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response is a non-empty array', function() {",
+              "    pm.expect(pm.response.json()).to.be.an('array').with.lengthOf.above(0);",
+              "});",
+              "",
+              "const selectedUserId = Number(pm.environment.get('userId'));",
+              "",
+              "pm.test('Every post belongs to the selected user', function() {",
+              "    const posts = pm.response.json();",
+              "    posts.forEach(function(post, i) {",
+              "        pm.expect(post.userId, 'post[' + i + '].userId').to.equal(selectedUserId);",
+              "    });",
+              "});",
+              "",
+              "pm.test('Every post object matches the schema', function() {",
+              "    const posts = pm.response.json();",
+              "    posts.forEach(function(post, i) {",
+              "        postSchema.required.forEach(function(key) {",
+              "            pm.expect(post[key], 'post[' + i + '].' + key + ' must exist and not be empty').to.exist;",
+              "        });",
+              "        Object.keys(postSchema.properties).forEach(function(key) {",
+              "            if (post[key] !== undefined) {",
+              "                pm.expect(typeof post[key], 'post[' + i + '].' + key + ' type').to.equal(postSchema.properties[key].type);",
+              "            }",
+              "        });",
+              "    });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/posts?userId={{userId}}"
+      }
+    },
+    {
+      "name": "3. GET /posts/{{missingPostId}} – non-existent post",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 404 for a missing resource', function() {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test('Response body is an empty object (JSONPlaceholder convention)', function() {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body).to.be.an('object');",
+              "    pm.expect(Object.keys(body)).to.have.lengthOf(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/posts/{{missingPostId}}"
+      }
+    }
+  ]
+}

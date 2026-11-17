@@ -1,0 +1,25 @@
+{
+  "id": "limestone-env",
+  "name": "JSONPlaceholder Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "https://jsonplaceholder.typicode.com",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "enabled": true,
+      "type": "any"
+    },
+    {
+      "key": "missingPostId",
+      "value": "9999",
+      "enabled": true,
+      "type": "default"
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}
